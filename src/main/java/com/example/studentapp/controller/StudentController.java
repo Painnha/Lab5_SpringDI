@@ -2,12 +2,7 @@ package com.example.studentapp.controller;
 
 import com.example.studentapp.model.Student;
 import com.example.studentapp.service.StudentService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -34,5 +29,15 @@ public class StudentController {
     @GetMapping("/{id}")
     public Student getById(@PathVariable Integer id) {
         return service.findById(id);
+    }
+
+    @PutMapping("/{id}")
+    public Student updateStudent(@PathVariable Integer id, @RequestBody Student student) {
+        return service.update(id, student);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteStudent(@PathVariable Integer id) {
+        service.delete(id);
     }
 }

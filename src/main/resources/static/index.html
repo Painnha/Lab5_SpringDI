@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sinh Viên</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        input { padding: 8px; width: 200px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white;}
+        .btn-submit { background: #28a745; }
+        .btn-submit:hover { background: #218838; }
+        .btn-edit { background: #ffc107; color: black; padding: 5px 10px;}
+        .btn-delete { background: #dc3545; padding: 5px 10px;}
+        .btn-search { background: #17a2b8; }
+        .btn-reset { background: #6c757d; }
+        .search-box { background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .empty-row { text-align: center; color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎓 Hệ Thống Quản Lý Sinh Viên</h1>
+
+    <div class="search-box">
+        <label style="margin-right: 10px; font-weight: bold;">🔍 Tìm kiếm:</label>
+        <input type="number" id="searchId" placeholder="Nhập ID sinh viên cần tìm...">
+        <button class="btn-search" onclick="searchStudent()" style="margin-right: 5px;">Tìm</button>
+        <button class="btn-reset" onclick="resetSearch()">Hiển thị tất cả</button>
+    </div>
+
+    <h2 id="formTitle">➕ Thêm Sinh Viên Mới</h2>
+    <form id="studentForm" class="form-group" onsubmit="saveStudent(event)">
+        <input type="hidden" id="studentId">
+        <input type="text" id="name" placeholder="Họ và tên" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="number" id="age" placeholder="Tuổi" required>
+        <button type="submit" class="btn-submit" id="submitBtn">Lưu Sinh Viên</button>
+        <button type="button" onclick="resetForm()" class="btn-reset" style="display: none;" id="cancelBtn">Hủy Sửa</button>
+    </form>
+
+    <h2>📋 Danh Sách Sinh Viên</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Họ Tên</th>
+            <th>Email</th>
+            <th>Tuổi</th>
+            <th>Hành động</th>
+        </tr>
+        </thead>
+        <tbody id="studentTableBody">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const apiUrl = '/students';
+
+    // 1. Tải danh sách tất cả sinh viên
+    function loadStudents() {
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                renderTable(data);
+            })
+            .catch(error => console.error('Lỗi:', error));
+    }
+
+    // Hàm phụ: Vẽ dữ liệu ra bảng (nhận vào một mảng chứa 1 hoặc nhiều sinh viên)
+    function renderTable(students) {
+        const tbody = document.getElementById('studentTableBody');
+        tbody.innerHTML = '';
+
+        if (!students || students.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Không có dữ liệu sinh viên nào!</td></tr>`;
+            return;
+        }
+
+        students.forEach(student => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.email}</td>
+                    <td>${student.age}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editStudent(${student.id}, '${student.name}', '${student.email}', ${student.age})">Sửa</button>
+                        <button class="btn-delete" onclick="deleteStudent(${student.id})">Xóa</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    // 2. Tìm kiếm sinh viên theo ID
+    function searchStudent() {
+        const id = document.getElementById('searchId').value;
+        if (!id) {
+            alert("Vui lòng nhập ID cần tìm!");
+            return;
+        }
+
+        fetch(`${apiUrl}/${id}`)
+            .then(response => {
+                if (!response.ok) throw new Error("Không tìm thấy");
+                return response.json();
+            })
+            .then(student => {
+                if (student && student.id) {
+                    // Truyền vào mảng có 1 phần tử để vẽ lên bảng
+                    renderTable([student]);
+                } else {
+                    renderTable([]); // Vẽ bảng trống
+                }
+            })
+            .catch(error => {
+                renderTable([]); // Lỗi (ví dụ 404) cũng vẽ bảng báo không tìm thấy
+            });
+    }
+
+    // 3. Nút "Hiển thị tất cả"
+    function resetSearch() {
+        document.getElementById('searchId').value = ""; // Xóa trắng ô tìm kiếm
+        loadStudents(); // Tải lại toàn bộ
+    }
+
+    // 4. Lưu sinh viên (Thêm hoặc Sửa)
+    function saveStudent(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('studentId').value;
+        const studentData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            age: document.getElementById('age').value
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${apiUrl}/${id}` : apiUrl;
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentData)
+        })
+        .then(() => {
+            alert(id ? 'Cập nhật thành công!' : 'Thêm thành công!');
+            resetForm();
+            resetSearch(); // Tải lại danh sách đầy đủ sau khi lưu
+        })
+        .catch(error => console.error('Lỗi:', error));
+    }
+
+    // 5. Xóa sinh viên
+    function deleteStudent(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa sinh viên này không?')) {
+            fetch(`${apiUrl}/${id}`, { method: 'DELETE' })
+            .then(() => {
+                alert('Đã xóa thành công!');
+                resetSearch(); // Tải lại bảng sau khi xóa
+            })
+            .catch(error => console.error('Lỗi:', error));
+        }
+    }
+
+    // 6. Đưa dữ liệu lên Form để Sửa
+    function editStudent(id, name, email, age) {
+        document.getElementById('formTitle').innerText = "✏️ Sửa Thông Tin Sinh Viên";
+        document.getElementById('submitBtn').innerText = "Cập Nhật";
+        document.getElementById('cancelBtn').style.display = "inline-block";
+
+        document.getElementById('studentId').value = id;
+        document.getElementById('name').value = name;
+        document.getElementById('email').value = email;
+        document.getElementById('age').value = age;
+
+        // Cuộn lên đầu trang chỗ form nhập liệu
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 7. Hủy Sửa / Reset Form
+    function resetForm() {
+        document.getElementById('studentForm').reset();
+        document.getElementById('studentId').value = "";
+
+        document.getElementById('formTitle').innerText = "➕ Thêm Sinh Viên Mới";
+        document.getElementById('submitBtn').innerText = "Lưu Sinh Viên";
+        document.getElementById('cancelBtn').style.display = "none";
+    }
+
+    // Tự động tải danh sách lúc mở trang
+    window.onload = loadStudents;
+</script>
+
+</body>
+</html>

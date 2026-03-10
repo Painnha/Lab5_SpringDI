@@ -7,5 +7,7 @@ public interface StudentService {
     Student save(Student student);
     List<Student> findAll();
     Student findById(Integer id);
+    Student update(Integer id, Student student);
+    void delete(Integer id);
 
 }
